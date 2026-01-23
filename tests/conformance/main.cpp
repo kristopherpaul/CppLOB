@@ -1,5 +1,5 @@
 #include "runner.hpp"
-#include "../../tests/reference/reference_book.hpp"
+#include "reference/reference_book.hpp"
 #include <memory>
 
 int main() {

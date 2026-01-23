@@ -14,7 +14,7 @@ cmake --build build
 ## Running Tests
 
 ```bash
-cmake -B build -DBUILD_TESTS=ON
+cmake -B build -DCMAKE_BUILD_TYPE=Release -DBUILD_TESTS=ON
 cmake --build build
-./build/conformance_tests
+ctest --test-dir build --output-on-failure
 ```
