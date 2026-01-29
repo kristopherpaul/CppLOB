@@ -58,6 +58,7 @@ if(BUILD_TESTS)
     target_link_libraries(conformance_tests
         PRIVATE
             lob_spec
+            lob_runtime
     )
 
     target_include_directories(conformance_tests
@@ -68,6 +69,20 @@ if(BUILD_TESTS)
     add_test(
         NAME conformance_tests
         COMMAND conformance_tests
+    )
+
+    add_executable(runtime_invariants
+        tests/runtime/invariants_test.cpp
+    )
+
+    target_link_libraries(runtime_invariants
+        PRIVATE
+            lob_runtime
+    )
+
+    add_test(
+        NAME runtime_invariants
+        COMMAND runtime_invariants
     )
 endif()
 
