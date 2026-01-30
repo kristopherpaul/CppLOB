@@ -1,7 +1,7 @@
 #pragma once
 
 #include "scenarios.hpp"
-#include "../../tests/reference/reference_book.hpp"
+#include "reference/reference_book.hpp"
 #include <iostream>
 #include <string>
 #include <vector>
@@ -56,8 +56,16 @@ TestResult run_scenario(const Scenario& scenario, Book& book) {
     auto ref_snap = ref.snapshot();
     auto book_snap = book.snapshot();
 
-    auto ref_best_bid = ref_snap.bids.empty() ? std::optional<spec::Price>{} : std::optional<spec::Price>{ref_snap.bids.begin()->first};
-    auto ref_best_ask = ref_snap.asks.empty() ? std::optional<spec::Price>{} : std::optional<spec::Price>{ref_snap.asks.begin()->first};
+    std::optional<spec::Price> ref_best_bid;
+    std::optional<spec::Price> ref_best_ask;
+
+    if (!ref_snap.bids.empty()) {
+        ref_best_bid = ref_snap.bids.begin()->first;
+    }
+
+    if (!ref_snap.asks.empty()) {
+        ref_best_ask = ref_snap.asks.begin()->first;
+    }
 
     if (scenario.final_best_bid != book.best_bid()) {
         return {scenario.name, false, "Best bid mismatch: expected " + 

@@ -16,11 +16,11 @@ constexpr bool crosses(Side incoming_side, Price incoming_price, std::optional<P
     return resting_price.has_value() && crosses(incoming_side, incoming_price, *resting_price);
 }
 
-constexpr Price execution_price(Side incoming_side, Price resting_price) noexcept {
+constexpr Price execution_price([[maybe_unused]] Side incoming_side, Price resting_price) noexcept {
     return resting_price;
 }
 
-inline bool valid_price(Price price) noexcept {
+inline bool valid_price([[maybe_unused]] Price price) noexcept {
     return true;
 }
 
