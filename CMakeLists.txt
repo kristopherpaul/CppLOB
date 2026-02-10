@@ -137,7 +137,80 @@ endif()
 
 # Benchmarks
 if(BUILD_BENCHMARKS)
-    # Benchmarks will be added later
+    include(FetchContent)
+    FetchContent_Declare(
+        benchmark
+        GIT_REPOSITORY https://github.com/google/benchmark
+        GIT_TAG v1.8.3
+    )
+    FetchContent_MakeAvailable(benchmark)
+
+    # Benchmark configuration options
+    option(BENCHMARK_CONFIG_SMALL "Run small config benchmarks (1-1000 prices, 10K orders)" ON)
+    option(BENCHMARK_CONFIG_MEDIUM "Run medium config benchmarks (1-5000 prices, 50K orders)" ON)
+    option(BENCHMARK_CONFIG_LARGE "Run large config benchmarks (1-10000 prices, 100K orders)" OFF)
+
+    # Compile-time benchmark launcher script
+    set(CT_COMPILE_TIMER "${CMAKE_CURRENT_SOURCE_DIR}/scripts/compile_timer.py")
+    set(CT_GENERATOR "${CMAKE_CURRENT_SOURCE_DIR}/scripts/generate_ct_benchmarks.py")
+
+    # Runtime benchmarks
+    add_executable(runtime_benchmarks
+        benchmarks/runtime/runtime_submit.cpp
+        benchmarks/runtime/runtime_cancel.cpp
+        benchmarks/runtime/runtime_best_price.cpp
+        benchmarks/runtime/runtime_evolution.cpp
+        benchmarks/runtime/runtime_allocation.cpp
+        benchmarks/runtime/workloads.cpp
+    )
+    target_link_libraries(runtime_benchmarks PRIVATE lob_runtime benchmark::benchmark benchmark::benchmark_main)
+    target_include_directories(runtime_benchmarks PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/runtime)
+    target_compile_options(runtime_benchmarks PRIVATE -DBENCHMARK_CONFIG_SMALL=${BENCHMARK_CONFIG_SMALL} -DBENCHMARK_CONFIG_MEDIUM=${BENCHMARK_CONFIG_MEDIUM} -DBENCHMARK_CONFIG_LARGE=${BENCHMARK_CONFIG_LARGE})
+
+    # Compile-time benchmarks - generate configurations
+    add_custom_command(
+        OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/benchmarks/compile_time/generated/.generated
+        COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/benchmarks/compile_time/generated
+        COMMAND python3 ${CT_GENERATOR} 
+            ${CMAKE_CURRENT_SOURCE_DIR}/benchmarks/compile_time/compile_time_scaling.cpp.in
+            ${CMAKE_CURRENT_BINARY_DIR}/benchmarks/compile_time/generated
+        COMMAND ${CMAKE_COMMAND} -E touch ${CMAKE_CURRENT_BINARY_DIR}/benchmarks/compile_time/generated/.generated
+        COMMENT "Generating compile-time benchmark configurations"
+        WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+    )
+
+    # Create compile-time benchmark targets from generated sources
+    add_custom_target(compile_time_benchmarks_generate DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/benchmarks/compile_time/generated/.generated)
+
+    # Function to create CT benchmark targets from generated files
+    function(create_ct_benchmark_targets)
+        file(GLOB CT_GENERATED_SOURCES "${CMAKE_CURRENT_BINARY_DIR}/benchmarks/compile_time/generated/*.cpp")
+        foreach(src ${CT_GENERATED_SOURCES})
+            get_filename_component(name ${src} NAME_WE)
+            add_executable(ct_${name} ${src})
+            target_link_libraries(ct_${name} PRIVATE lob_compile_time lob_spec)
+            set_target_properties(ct_${name} PROPERTIES EXCLUDE_FROM_ALL TRUE)
+            # Use compile timer for measurement
+            set_target_properties(ct_${name} PROPERTIES
+                CXX_COMPILER_LAUNCHER "${CT_COMPILE_TIMER};${CMAKE_CXX_COMPILER}"
+            )
+        endforeach()
+    endfunction()
+
+    # Generate targets at configure time (will be empty initially, but works after first build)
+    # For actual use, run: cmake --build build --target compile_time_benchmarks_generate && cmake build
+    create_ct_benchmark_targets()
+
+    # Binary size measurement target
+    add_custom_target(measure_binary_size
+        COMMAND ${CMAKE_COMMAND} -E echo "=== Binary Size Analysis ==="
+        COMMAND ${CMAKE_COMMAND} -E echo "Runtime benchmarks executable:"
+        COMMAND ${CMAKE_COMMAND} -E echo "  size: \$<TARGET_FILE:runtime_benchmarks>"
+        COMMAND ${CMAKE_COMMAND} -E env size \$<TARGET_FILE:runtime_benchmarks> 2>/dev/null || ${CMAKE_COMMAND} -E echo "  (size command not available)"
+        COMMAND ${CMAKE_COMMAND} -E echo "Compile-time example:"
+        COMMAND ${CMAKE_COMMAND} -E env size \$<TARGET_FILE:compile_time_example> 2>/dev/null || ${CMAKE_COMMAND} -E echo "  (build with BUILD_EXAMPLES=ON)"
+        COMMENT "Measuring binary sizes..."
+    )
 endif()
 
 # Installation
