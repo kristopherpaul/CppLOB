@@ -59,6 +59,7 @@ if(BUILD_TESTS)
         PRIVATE
             lob_spec
             lob_runtime
+            lob_compile_time
     )
 
     target_include_directories(conformance_tests
@@ -84,6 +85,33 @@ if(BUILD_TESTS)
         NAME runtime_invariants
         COMMAND runtime_invariants
     )
+
+    set(COMPILE_TIME_TEST_SOURCES
+        core_test
+        book_invariants_test
+        match_result_test
+    )
+
+    foreach(TEST_NAME IN LISTS COMPILE_TIME_TEST_SOURCES)
+        add_executable(compile_time_${TEST_NAME}
+            tests/compile_time/${TEST_NAME}.cpp
+        )
+
+        target_link_libraries(compile_time_${TEST_NAME}
+            PRIVATE
+                lob_compile_time
+        )
+
+        target_include_directories(compile_time_${TEST_NAME}
+            PRIVATE
+                ${CMAKE_CURRENT_SOURCE_DIR}/tests
+        )
+
+        add_test(
+            NAME compile_time_${TEST_NAME}
+            COMMAND compile_time_${TEST_NAME}
+        )
+    endforeach()
 endif()
 
 # Examples
